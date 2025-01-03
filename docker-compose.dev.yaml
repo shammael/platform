@@ -1,0 +1,57 @@
+services:
+  school:
+    build:
+      context: ./school
+      dockerfile: Dockerfile
+      target: build
+    container_name: school
+    restart: always
+    command: pnpm start:dev
+    ports:
+      - 3000:3000
+    env_file:
+      - ./school/.env
+    volumes:
+      - ./school/prisma/migrations:/home/app/prisma/migrations
+      - ./school/node_modules/.prisma/client:/home/app/node_modules/.prisma/client:ro
+      # - ./school/node_modules/@prisma/client:/home/app/node_modules/@prisma/client
+    develop:
+      watch:
+        - path: ./school
+          target: /home/app
+          action: sync
+        - path: package.json
+          action: rebuild
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx
+    ports:
+      - 80:80
+    restart: always
+    volumes:
+      - ./nginx/cors.conf:/etc/nginx/cors.conf
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+  postgresql:
+    image: postgres:17-alpine3.21
+    container_name: postgresql
+    restart: always
+    shm_size: 128mb
+    env_file:
+      - .env.postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./init_postgresql_database.sh:/docker-entrypoint-initdb.d/init-multi-postgres-databases.sh
+      - postgres-data:/var/lib/postgresql/data
+    # environment:
+    # POSTGRES_USER: school
+    # POSTGRES_PASSWORD: school
+    # POSTGRES_DB: school
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  postgres-data:
